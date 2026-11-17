@@ -1,0 +1,176 @@
+{
+  "app": "jawoo",
+  "schemaVersion": 4,
+  "exportedAt": "2026-11-16T18:00:00.000Z",
+  "data": {
+    "settings": {
+      "location": {
+        "city": "فاقوس",
+        "governorate": "الشرقية",
+        "country": "مصر",
+        "lat": 30.7303,
+        "lng": 31.7936,
+        "timezone": "Africa/Cairo"
+      },
+      "prayer": {
+        "method": 5,
+        "preAdhanMinutes": 10,
+        "adhanAudioEnabled": true,
+        "iqamaEnabled": true,
+        "iqamaMinutes": {
+          "fajr": 20,
+          "dhuhr": 15,
+          "asr": 15,
+          "maghrib": 10,
+          "isha": 15
+        },
+        "iqamaEnabledByPrayer": {
+          "fajr": true,
+          "dhuhr": true,
+          "asr": true,
+          "maghrib": true,
+          "isha": true
+        }
+      },
+      "audio": {
+        "soundEnabled": true,
+        "volume": 0.75,
+        "adhanTone": "calm_chime"
+      },
+      "alerts": {
+        "quietHoursEnabled": true,
+        "quietStart": "22:30",
+        "quietEnd": "04:00",
+        "monThuEnabled": true,
+        "monThuHour": 20,
+        "whiteDaysEnabled": true,
+        "whiteDaysHour": 20,
+        "waterReminderEnabled": true,
+        "waterIntervalMinutes": 90,
+        "waterMaxDaily": 6,
+        "movementReminderEnabled": false,
+        "movementIntervalMinutes": 120,
+        "sleepReminderEnabled": true,
+        "sleepTime": "22:30",
+        "sleepReminderMinutesBefore": 30,
+        "phoneAwayTime": "22:00"
+      },
+      "focus": {
+        "focusMinutes": 45,
+        "breakMinutes": 10,
+        "soundEnabled": true
+      },
+      "study": {
+        "weeklyTargetHours": 12,
+        "backlogTotalInitial": 9,
+        "weakestSubject": "عربي",
+        "autoShiftOnPrayer": true,
+        "prayerPauseBeforeMinutes": 2,
+        "prayerResumeAfterMinutes": 5,
+        "ramadanMode": "auto",
+        "ramadanWindow": "after_taraweeh",
+        "customBlocksByDay": {}
+      },
+      "habits": {
+        "enableWater": true,
+        "enableMovement": true
+      },
+      "calendar": {
+        "hijriOffsetDays": 0
+      },
+      "display": {
+        "theme": "light",
+        "fontScale": "normal",
+        "showEducationalWords": true,
+        "showWeather": true
+      },
+      "screensaver": {
+        "enabled": true,
+        "idleSeconds": 60,
+        "preset": "royal_ruqah",
+        "backgroundMode": "auto_rotate",
+        "selectedBackground": "",
+        "rotateIntervalMinutes": 5,
+        "nightDimmingEnabled": true,
+        "antiBurnInEnabled": true
+      },
+      "quran": {
+        "mode": "single",
+        "selectedSurah": 1,
+        "repeatMode": "loop",
+        "playlist": [67, 32, 18, 2],
+        "playlistLoop": true,
+        "volume": 0.75,
+        "autoPlayOnSleep": false,
+        "sleepMode": "playlist",
+        "sleepVolume": 0.35,
+        "sleepTimerMinutes": 30
+      },
+      "qiyam": {
+        "enabled": false,
+        "mode": "last_third",
+        "beforeFajrMinutes": 45
+      }
+    },
+    "tasks": [
+      {
+        "id": "sample-task-1",
+        "title": "مذاكرة الرياضيات وحل ٣ مسائل",
+        "category": "مذاكرة",
+        "startTime": "16:00",
+        "endTime": "17:00",
+        "priority": "عالية",
+        "status": "in_progress",
+        "createdAt": "2026-11-16T10:00:00.000Z",
+        "updatedAt": "2026-11-16T10:00:00.000Z"
+      },
+      {
+        "id": "sample-task-2",
+        "title": "ورد القرآن الكريم",
+        "category": "ورد",
+        "startTime": "18:00",
+        "endTime": "18:30",
+        "priority": "عالية",
+        "status": "completed",
+        "createdAt": "2026-11-16T10:00:00.000Z",
+        "updatedAt": "2026-11-16T18:30:00.000Z"
+      }
+    ],
+    "habitsByDate": {
+      "2026-11-15": {
+        "fajr": true,
+        "dhuhr": true,
+        "asr": true,
+        "maghrib": true,
+        "isha": true,
+        "quran": true,
+        "study": true,
+        "water": true,
+        "movement": false
+      }
+    },
+    "studyProgress": {
+      "backlogRemaining": 8,
+      "completedBlocksByDate": {
+        "2026-11-15": {
+          "sun-b1": true,
+          "sun-b2": true
+        }
+      },
+      "swappedDates": {},
+      "overrideShiftDates": {},
+      "ramadanPromptDismissed": false
+    },
+    "focusSessions": [
+      {
+        "id": "sample-focus-1",
+        "dateKey": "2026-11-15",
+        "phase": "focus",
+        "durationMinutes": 45,
+        "completedAt": "2026-11-15T17:00:00.000Z"
+      }
+    ],
+    "alertLedger": {},
+    "customEvents": []
+  }
+}

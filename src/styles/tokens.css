@@ -1,0 +1,123 @@
+:root {
+  /* ألوان الوضع الفاتح الافتراضي (عاجي دافئ + زمردي + ذهبي هادئ) */
+  --bg-canvas: #f6f2e9;
+  --bg-surface: #fffdf8;
+  --bg-subtle: #ede7da;
+  --bg-elevated: #ffffff;
+
+  --text-primary: #181c19;
+  --text-secondary: #4e5650;
+  --text-muted: #6c736d;
+  --text-on-primary: #ffffff;
+
+  --border-subtle: rgba(24, 28, 25, 0.11);
+  --border-strong: rgba(24, 28, 25, 0.22);
+
+  --color-primary: #0f6247;
+  --color-primary-hover: #0b4e38;
+  --color-primary-soft: #e3f0ea;
+  --color-primary-border: rgba(15, 98, 71, 0.28);
+
+  --color-gold: #9a7124;
+  --color-gold-soft: #f6eedb;
+  --color-gold-border: rgba(154, 113, 36, 0.32);
+
+  --color-success: #166534;
+  --color-success-soft: #e4f3e8;
+  --color-warning: #a15208;
+  --color-warning-soft: #fef0d6;
+  --color-danger: #a82424;
+  --color-danger-soft: #fbe8e8;
+
+  /* الخطوط العربية المحلية والاحتياطية */
+  --font-display: "Amiri", "Traditional Arabic", "Geeza Pro", serif;
+  --font-sans: "IBM Plex Sans Arabic", "Noto Naskh Arabic", "Segoe UI", "Tahoma", "Arial", sans-serif;
+
+  /* مقاسات النصوص المتجاوبة لدقتي 720p و 1080p */
+  --text-xs: clamp(0.85rem, 0.8vw + 0.35rem, 1.05rem);
+  --text-sm: clamp(0.95rem, 0.9vw + 0.4rem, 1.2rem);
+  --text-base: clamp(1.05rem, 1vw + 0.45rem, 1.38rem);
+  --text-lg: clamp(1.25rem, 1.25vw + 0.55rem, 1.7rem);
+  --text-xl: clamp(1.5rem, 1.7vw + 0.65rem, 2.25rem);
+  --text-2xl: clamp(2rem, 2.4vw + 0.8rem, 3.2rem);
+  --text-clock: clamp(2.5rem, 3.4vw + 0.9rem, 4.4rem);
+
+  /* المسافات ومناطق الأمان للشاشات الكبيرة (Overscan 4%) */
+  --safe-y: clamp(14px, 3.6vh, 40px);
+  --safe-x: clamp(20px, 3.8vw, 56px);
+  --space-1: clamp(4px, 0.45vw, 8px);
+  --space-2: clamp(8px, 0.8vw, 14px);
+  --space-3: clamp(12px, 1.15vw, 20px);
+  --space-4: clamp(16px, 1.5vw, 26px);
+  --space-5: clamp(22px, 2vw, 34px);
+
+  /* الزوايا الهندسية المتمركزة */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+
+  /* حلقة تركيز عالية التباين للريموت */
+  --focus-ring: 0 0 0 4px var(--bg-canvas), 0 0 0 8px var(--color-primary);
+  --focus-border: var(--color-primary);
+
+  /* حركة هادئة ومقيدة (GPU composited) */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 140ms;
+  --duration-normal: 220ms;
+
+  /* ظل ناعم غير مبالغ فيه */
+  --shadow-card: 0 2px 10px rgba(24, 28, 25, 0.045);
+  --shadow-focus: 0 8px 24px rgba(15, 98, 71, 0.14);
+}
+
+[data-theme="night"] {
+  --bg-canvas: #131715;
+  --bg-surface: #1b211e;
+  --bg-subtle: #242b27;
+  --bg-elevated: #222925;
+
+  --text-primary: #f2eee6;
+  --text-secondary: #bcc3bc;
+  --text-muted: #939c94;
+  --text-on-primary: #0b1611;
+
+  --border-subtle: rgba(242, 238, 230, 0.12);
+  --border-strong: rgba(242, 238, 230, 0.25);
+
+  --color-primary: #44b88d;
+  --color-primary-hover: #58c99e;
+  --color-primary-soft: rgba(68, 184, 141, 0.15);
+  --color-primary-border: rgba(68, 184, 141, 0.36);
+
+  --color-gold: #d9ac56;
+  --color-gold-soft: rgba(217, 172, 86, 0.14);
+  --color-gold-border: rgba(217, 172, 86, 0.36);
+
+  --color-success: #52c77c;
+  --color-success-soft: rgba(82, 199, 124, 0.15);
+  --color-warning: #eb9d38;
+  --color-warning-soft: rgba(235, 157, 56, 0.15);
+  --color-danger: #eb6b6b;
+  --color-danger-soft: rgba(235, 107, 107, 0.15);
+
+  --focus-ring: 0 0 0 4px var(--bg-canvas), 0 0 0 8px var(--color-gold);
+  --focus-border: var(--color-gold);
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.32);
+  --shadow-focus: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+[data-font-scale="large"] {
+  --text-xs: clamp(0.95rem, 0.9vw + 0.4rem, 1.15rem);
+  --text-sm: clamp(1.05rem, 1vw + 0.45rem, 1.32rem);
+  --text-base: clamp(1.18rem, 1.15vw + 0.5rem, 1.54rem);
+  --text-lg: clamp(1.4rem, 1.4vw + 0.6rem, 1.9rem);
+  --text-xl: clamp(1.7rem, 1.9vw + 0.7rem, 2.5rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 1ms;
+    --duration-normal: 1ms;
+  }
+}
