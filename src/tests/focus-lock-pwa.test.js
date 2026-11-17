@@ -4,13 +4,17 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { el } from '../components/dom.js';
 import { mountApp } from '../main.js';
+import { getHijriDate, getZonedParts, safeFormatLocalDateTimeAr } from '../services/clock.js';
 import { createPwaInstaller } from '../services/pwa-installer.js';
+import { isIndexedDbAvailable } from '../services/quran-storage.js';
 import { parseAndValidateBackup } from '../storage/backup.js';
+import { isLocalStorageAvailable, loadAppState } from '../storage/repository.js';
 
 describe('Zero-Reload Focus/Scroll Lock & PWA Installation', () => {
   let mounted = null;
 
   afterEach(() => {
+    vi.useRealTimers();
     mounted?.destroy?.();
     mounted = null;
     document.body.innerHTML = '';
@@ -323,5 +327,76 @@ describe('Zero-Reload Focus/Scroll Lock & PWA Installation', () => {
       expect(Object.hasOwn(parsed.stateData.habitsByDate, '__proto__')).toBe(false);
     }
     expect({}.polluted).toBeUndefined();
+  });
+
+  it('guards legacy TV browser limitations (Intl RangeError, blocked localStorage/indexedDB, ES5 watchdog script)', () => {
+    // ١. إذا رمى Intl.DateTimeFormat خطأ RangeError يتكفّل البديل الحسابي بالهجري وتنسيق الوقت بأمان
+    const intlSpy = vi.spyOn(Intl, 'DateTimeFormat').mockImplementation(function () {
+      throw new RangeError('Unsupported calendar');
+    });
+    const parts = getZonedParts(new Date('2026-11-17T08:00:00Z'), 'Africa/Cairo');
+    expect(parts.year).toBe(2026);
+    const hijri = getHijriDate(new Date('2026-11-17T08:00:00Z'), 'Africa/Cairo');
+    expect(hijri.formattedAr).toContain('هـ');
+    expect(safeFormatLocalDateTimeAr('2026-11-17T08:00:00Z')).toContain('٢٠٢٦');
+    intlSpy.mockRestore();
+
+    // ٢. إذا كان localStorage أو indexedDB مقيداً (throws SecurityError) لا يتوقف التشغيل
+    const throwingStorage = {
+      getItem() {
+        throw new Error('SecurityError');
+      },
+      setItem() {
+        throw new Error('SecurityError');
+      },
+      removeItem() {
+        throw new Error('SecurityError');
+      },
+    };
+    expect(isLocalStorageAvailable(throwingStorage)).toBe(false);
+    const loaded = loadAppState(throwingStorage);
+    expect(loaded.storageAvailable).toBe(false);
+    expect(loaded.state.settings.location.city).toBe('فاقوس');
+
+    vi.stubGlobal('indexedDB', undefined);
+    expect(isIndexedDbAvailable()).toBe(false);
+
+    // ٣. التحقق من أن سكريبت مراقب الإقلاع في index.html مكتوب بـ ES5 نقي دون صيغ حديثة ويحتوي مهلة 6 ثوانٍ
+    const html = fs.readFileSync(path.resolve('index.html'), 'utf8');
+    const inlineMatch = html.match(/<script>([\s\S]*?)<\/script>/);
+    expect(inlineMatch).not.toBeNull();
+    const watchdogCode = inlineMatch[1];
+    expect(watchdogCode).not.toMatch(/\b(const|let|class|async|await)\b/);
+    expect(watchdogCode).not.toContain('=>');
+    expect(watchdogCode).not.toContain('`');
+    expect(watchdogCode).toContain('window.onerror');
+    expect(watchdogCode).toContain('6000');
+    expect(watchdogCode).toContain('مسح الكاش وإعادة التشغيل');
+
+    // ٤. محاكاة تعطل الإقلاع لأكثر من 6 ثوانٍ والتحقق من ظهور بطاقة الاسترداد وزر مسح الكاش وإلغاء تسجيل SW
+    vi.unstubAllGlobals();
+    vi.useFakeTimers();
+    const unregisterMock = vi.fn().mockResolvedValue(true);
+    const cacheDeleteMock = vi.fn().mockResolvedValue(true);
+    document.body.innerHTML = '<div id="app"><div id="jawoo-boot-fallback">جاري تشغيل لوحة جووو...</div></div>';
+    window.caches = { keys: vi.fn().mockResolvedValue(['jawoo-static-v3']), delete: cacheDeleteMock };
+    Object.defineProperty(window.navigator, 'serviceWorker', {
+      configurable: true,
+      value: { getRegistrations: vi.fn().mockResolvedValue([{ unregister: unregisterMock }]) },
+    });
+
+    new Function(watchdogCode)();
+    window.onerror('SyntaxError: Unexpected token', 'app.js', 12, 1);
+    vi.advanceTimersByTime(6100);
+
+    const recovery = document.getElementById('jawoo-boot-recovery');
+    expect(recovery).not.toBeNull();
+    expect(recovery.textContent).toContain('SyntaxError: Unexpected token');
+    const recoveryBtn = document.getElementById('jawoo-clear-cache-btn');
+    expect(recoveryBtn).not.toBeNull();
+    expect(recoveryBtn.textContent).toBe('مسح الكاش وإعادة التشغيل');
+
+    vi.useRealTimers();
+    delete window.caches;
   });
 });

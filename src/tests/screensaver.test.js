@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createStore } from '../app/state.js';
 import { createScreensaverOverlay, renderScreensaverPresetStage } from '../components/screensaver-overlay.js';
 import { createDefaultSettings } from '../data/defaults.js';
 import { SCREENSAVER_PRESETS } from '../data/screensaver-presets.js';
@@ -142,10 +143,48 @@ describe('luxury Arabic idle screensaver & animated backgrounds', () => {
       ).interrupt
     ).toBe(true);
 
+    // تنبيهات النوم والمهام غير الحرجة لا تقطع شاشة التوقف أو المعاينة الليلية
+    expect(
+      shouldInterruptScreensaverForAlert(
+        {
+          activeAlerts: [
+            { type: 'sleep', title: 'النوم أولاً (٨–١٠ ساعات) — تصبح على خير' },
+            { type: 'task', title: 'موعد المهمة: مراجعة المساء' },
+          ],
+        },
+        { status: 'idle' }
+      ).interrupt
+    ).toBe(false);
+
     expect(isScreensaverNightDimmed({ inQuietHours: true }, settings)).toBe(true);
     expect(getAntiBurnInOffset(0, true)).toEqual([0, 0]);
     expect(getAntiBurnInOffset(1, true)).toEqual([2, 0]);
     expect(getAntiBurnInOffset(3, false)).toEqual([0, 0]);
+  });
+
+  it('keeps manual preview and sleep-mode screensaver open past multiple 1s ticks during sleep hours (22:45)', () => {
+    vi.useFakeTimers();
+    const sleepHourMs = zonedDateTimeToTimestampMs('2026-11-17', '22:45', 'Africa/Cairo');
+    expect(Number.isFinite(sleepHourMs)).toBe(true);
+    vi.setSystemTime(sleepHourMs);
+
+    const store = createStore();
+    try {
+      store.start();
+      expect(store.getSnapshot().runtime.alertsState.activeAlerts.some((a) => a.type === 'sleep')).toBe(true);
+
+      store.screensaverActions.enterPreview();
+      expect(store.getSnapshot().runtime.screensaverActive).toBe(true);
+
+      // محاكاة مرور عدة دورات من المؤقت الثانوي (1000ms لكل دورة) للتأكد من عدم الإغلاق التلقائي
+      vi.advanceTimersByTime(3500);
+      expect(store.getSnapshot().runtime.screensaverActive).toBe(true);
+
+      store.screensaverActions.exit();
+      expect(store.getSnapshot().runtime.screensaverActive).toBe(false);
+    } finally {
+      store.destroy();
+    }
   });
 
   it('unmounts video and releases media src and timers cleanly on exit to prevent memory leaks', () => {

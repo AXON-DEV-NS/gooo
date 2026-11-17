@@ -22,8 +22,10 @@ export function describeWeatherCodeAr(code) {
 }
 
 export async function fetchWeatherForecast(location, timeoutMs = 7000) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const controller = typeof globalThis !== 'undefined' && typeof globalThis.AbortController === 'function'
+    ? new globalThis.AbortController()
+    : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
 
   try {
     const url =
@@ -35,7 +37,7 @@ export async function fetchWeatherForecast(location, timeoutMs = 7000) {
       `&timezone=${encodeURIComponent(location.timezone || 'Africa/Cairo')}` +
       `&forecast_days=1`;
 
-    const res = await fetch(url, { signal: controller.signal });
+    const res = await fetch(url, controller ? { signal: controller.signal } : {});
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
     }
@@ -57,7 +59,7 @@ export async function fetchWeatherForecast(location, timeoutMs = 7000) {
       fetchedAt: new Date().toISOString(),
     };
   } finally {
-    clearTimeout(timer);
+    if (timer !== null) clearTimeout(timer);
   }
 }
 

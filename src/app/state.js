@@ -1112,7 +1112,10 @@ export function createStore() {
       },
       async downloadSurahs(surahNumbers) {
         if (downloadAbortController) return;
-        downloadAbortController = new AbortController();
+        downloadAbortController =
+          typeof globalThis !== 'undefined' && typeof globalThis.AbortController === 'function'
+            ? new globalThis.AbortController()
+            : { signal: undefined, abort() {} };
         runtime.quranDownloads = {
           ...runtime.quranDownloads,
           batchProgress: { active: true, completed: 0, total: surahNumbers.length, currentSurah: surahNumbers[0], bytesDownloaded: 0, errors: 0 },

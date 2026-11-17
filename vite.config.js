@@ -102,7 +102,9 @@ export default defineConfig({
   plugins: [
     animatedBackgroundsPlugin(),
     legacy({
-      targets: ['defaults', 'chrome >= 64', 'safari >= 12'],
+      targets: ['chrome >= 49', 'safari >= 10', 'edge >= 15', 'android >= 5'],
+      renderLegacyChunks: true,
+      modernPolyfills: true,
     }),
   ],
   test: {

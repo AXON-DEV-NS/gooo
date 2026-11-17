@@ -13,14 +13,13 @@ const GREGORIAN_MONTHS_AR = [
   'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
 ];
 
+// التنبيهات الحرجة المرتبطة بالصلاة فقط تقطع شاشة التوقف؛ أما تنبيهات النوم والمهام فلا تمنع الوضع الليلي أو المعاينة
 const PRIORITY_INTERRUPT_TYPES = new Set([
   'pre_adhan',
   'adhan',
   'iqama',
   'qiyam',
   'study_pause',
-  'sleep',
-  'task',
 ]);
 
 export function getDiscoveredBackgrounds() {

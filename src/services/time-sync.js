@@ -49,12 +49,17 @@ export function getAccurateNowMs(timeDrift, deviceNowMs = Date.now()) {
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 4500) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const controller = typeof globalThis !== 'undefined' && typeof globalThis.AbortController === 'function'
+    ? new globalThis.AbortController()
+    : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
   try {
-    return await fetch(url, { ...options, signal: controller.signal, cache: 'no-store' });
+    const fetchOpts = controller
+      ? { ...options, signal: controller.signal, cache: 'no-store' }
+      : { ...options, cache: 'no-store' };
+    return await fetch(url, fetchOpts);
   } finally {
-    clearTimeout(timer);
+    if (timer !== null) clearTimeout(timer);
   }
 }
 

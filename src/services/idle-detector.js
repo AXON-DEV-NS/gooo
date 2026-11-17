@@ -17,6 +17,8 @@ export function createIdleDetector({
   let timerId = null;
   let lastMovePing = 0;
   let enteredAtMs = 0;
+  let consumeWakeUntilMs = 0;
+  let wakeKey = null;
 
   function clearIdleTimer() {
     if (timerId !== null) {
@@ -61,6 +63,29 @@ export function createIdleDetector({
   }
 
   function handleInteractionCapture(event) {
+    if (!active && Date.now() < consumeWakeUntilMs) {
+      if (['keypress', 'keyup', 'click', 'mouseup', 'touchend'].includes(event.type)) {
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+        if (typeof event.stopPropagation === 'function') event.stopPropagation();
+        if (event.type === 'click') {
+          consumeWakeUntilMs = 0;
+          wakeKey = null;
+        }
+        return;
+      }
+      if (event.type === 'keydown' && event.repeat && event.key === wakeKey) {
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
+        if (typeof event.stopPropagation === 'function') event.stopPropagation();
+        return;
+      }
+      if (event.type === 'keydown') {
+        consumeWakeUntilMs = 0;
+        wakeKey = null;
+      }
+    }
+
     if (active) {
       if (event.type === 'mousemove' && Date.now() - enteredAtMs < 400) {
         return;
@@ -76,7 +101,11 @@ export function createIdleDetector({
           return;
         }
       }
-      exit('user_input');
+      if (event.type === 'keydown' || event.type === 'mousedown' || event.type === 'touchstart' || event.type === 'wheel') {
+        consumeWakeUntilMs = Date.now() + 450;
+        wakeKey = event.type === 'keydown' ? event.key : null;
+        exit('user_input');
+      }
       return;
     }
 
@@ -85,10 +114,12 @@ export function createIdleDetector({
       if (now - lastMovePing < 800) return;
       lastMovePing = now;
     }
-    scheduleIdleTimer();
+    if (event.type === 'keydown' || event.type === 'mousedown' || event.type === 'touchstart' || event.type === 'wheel' || event.type === 'mousemove') {
+      scheduleIdleTimer();
+    }
   }
 
-  const events = ['keydown', 'mousedown', 'touchstart', 'wheel', 'mousemove'];
+  const events = ['keydown', 'keypress', 'keyup', 'click', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'wheel', 'mousemove'];
 
   function attach() {
     if (typeof document === 'undefined') return;

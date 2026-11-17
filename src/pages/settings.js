@@ -3,7 +3,7 @@ import { renderSubpageHeader } from '../components/nav-bar.js';
 import { renderScreensaverPresetStage } from '../components/screensaver-overlay.js';
 import { IDLE_DURATION_OPTIONS, SCREENSAVER_PRESETS, getPresetById } from '../data/screensaver-presets.js';
 import { STUDY_SUBJECTS } from '../data/study-schedule.js';
-import { getHijriDate, toArabicDigits } from '../services/clock.js';
+import { getHijriDate, safeFormatLocalDateTimeAr, safeFormatLocalTimeAr, toArabicDigits } from '../services/clock.js';
 import { QIYAM_HADITH } from '../services/qiyam.js';
 import { formatScreensaverData, getDiscoveredBackgrounds } from '../services/screensaver.js';
 import { exportBackupJson, mergeRestoredBackup, parseAndValidateBackup } from '../storage/backup.js';
@@ -460,7 +460,7 @@ export function renderSettingsPage(snapshot, store) {
         detailsNode: el(
           'div',
           { className: 'card', style: 'background:var(--bg-subtle);' },
-          el('div', null, `تاريخ التصدير: ${new Date(validated.exportedAt).toLocaleString('ar-EG')}`),
+          el('div', null, `تاريخ التصدير: ${safeFormatLocalDateTimeAr(validated.exportedAt, settings.location.timezone)}`),
           el('div', null, `عدد المهام: ${toArabicDigits(validated.summary.tasksCount)}`),
           el('div', null, `أيام سجل العادات: ${toArabicDigits(validated.summary.habitDaysCount)}`),
           el('div', null, `جلسات التركيز: ${toArabicDigits(validated.summary.focusSessionsCount)}`)
@@ -556,7 +556,7 @@ export function renderSettingsPage(snapshot, store) {
             'div',
             { className: 'list-stack', style: 'margin-top:4px;' },
             ...appState.systemLog.slice(-4).reverse().map((log) =>
-              el('div', { className: 'meta-source' }, `${new Date(log.at).toLocaleTimeString('ar-EG')}: ${log.message}`)
+              el('div', { className: 'meta-source' }, `${safeFormatLocalTimeAr(log.at, settings.location.timezone)}: ${log.message}`)
             )
           )
         )

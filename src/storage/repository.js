@@ -2,8 +2,20 @@ import { APP_META, createInitialState } from '../data/defaults.js';
 import { addDaysToDateKey, getZonedParts } from '../services/clock.js';
 import { migrateState } from './migrations.js';
 
-export function isLocalStorageAvailable(storage = globalThis.localStorage) {
+function resolveStorage(explicitStorage) {
+  if (explicitStorage !== undefined) return explicitStorage;
   try {
+    if (typeof window !== 'undefined' && window.localStorage) return window.localStorage;
+    if (typeof globalThis !== 'undefined' && globalThis.localStorage) return globalThis.localStorage;
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export function isLocalStorageAvailable(storageArg) {
+  try {
+    const storage = resolveStorage(storageArg);
     if (!storage) return false;
     const probeKey = '__jawoo_probe__';
     storage.setItem(probeKey, '1');
@@ -28,7 +40,11 @@ export function pruneEphemeralState(state, todayKey) {
   const monthEntries = Object.entries(state.cache?.prayerMonths || {}).sort((a, b) =>
     b[0].localeCompare(a[0])
   );
-  const nextMonths = Object.fromEntries(monthEntries.slice(0, 4));
+  const nextMonths = {};
+  for (let i = 0; i < Math.min(4, monthEntries.length); i += 1) {
+    const [k, v] = monthEntries[i];
+    nextMonths[k] = v;
+  }
 
   return {
     ...state,
@@ -43,8 +59,9 @@ export function pruneEphemeralState(state, todayKey) {
   };
 }
 
-export function loadAppState(storage = globalThis.localStorage) {
+export function loadAppState(storageArg) {
   try {
+    const storage = resolveStorage(storageArg);
     if (!isLocalStorageAvailable(storage)) {
       return {
         state: createInitialState(),
@@ -74,14 +91,15 @@ export function loadAppState(storage = globalThis.localStorage) {
   } catch {
     return {
       state: createInitialState(),
-      storageAvailable: isLocalStorageAvailable(storage),
+      storageAvailable: isLocalStorageAvailable(storageArg),
       recoveredFromError: true,
     };
   }
 }
 
-export function saveAppState(state, storage = globalThis.localStorage) {
+export function saveAppState(state, storageArg) {
   try {
+    const storage = resolveStorage(storageArg);
     if (!isLocalStorageAvailable(storage)) {
       return { ok: false, reason: 'التخزين المحلي غير متاح في هذا المتصفح' };
     }

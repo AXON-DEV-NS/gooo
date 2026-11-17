@@ -25,7 +25,7 @@ export function createAudioEngine({ onStateChange, onBlocked } = {}) {
     }
   }
 
-  function stop() {
+  function stop(silent = false) {
     if (activeStopTimer) {
       clearTimeout(activeStopTimer);
       activeStopTimer = null;
@@ -41,17 +41,16 @@ export function createAudioEngine({ onStateChange, onBlocked } = {}) {
     }
     if (status.isPlaying) {
       status.isPlaying = false;
-      emit();
+      if (!silent) emit();
     }
   }
 
   function setMuted(muted) {
     status.muted = Boolean(muted);
     if (status.muted) {
-      stop();
-    } else {
-      emit();
+      stop(true);
     }
+    emit();
   }
 
   function toggleMute() {
@@ -99,7 +98,7 @@ export function createAudioEngine({ onStateChange, onBlocked } = {}) {
   }
 
   async function unlockAndTest(volume = 0.75) {
-    stop();
+    stop(true);
     status.lastError = null;
     try {
       const AudioCtx = globalThis.AudioContext || globalThis.webkitAudioContext;
@@ -153,7 +152,7 @@ export function createAudioEngine({ onStateChange, onBlocked } = {}) {
       return { ok: false, skipped: true, reason: 'الصوت مكتوم أو معطل' };
     }
 
-    stop();
+    stop(true);
     const file =
       cueName === 'adhan' && adhanTone === 'soft_bell'
         ? CUE_FILES.soft

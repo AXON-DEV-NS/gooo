@@ -69,7 +69,13 @@ export function getZonedParts(date = new Date(), timeZone = 'Africa/Cairo') {
   const safeDate = date instanceof Date ? date : new Date(date);
   let parts;
   try {
+    if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') {
+      throw new Error('Intl unavailable');
+    }
     const fmt = getCachedZonedFormatter(timeZone);
+    if (!fmt || typeof fmt.formatToParts !== 'function') {
+      throw new Error('formatToParts unavailable');
+    }
     parts = fmt.formatToParts(safeDate);
   } catch {
     // بديل آمن إذا لم يدعم متصفح قديم المنطقة الزمنية المطلوبة
@@ -170,7 +176,13 @@ export function getHijriDate(date = new Date(), timeZone = 'Africa/Cairo', offse
   let source = 'تقويم أم القرى';
 
   try {
+    if (typeof Intl === 'undefined' || typeof Intl.DateTimeFormat !== 'function') {
+      throw new Error('Intl unavailable');
+    }
     const fmt = getCachedHijriFormatter(timeZone);
+    if (!fmt || typeof fmt.formatToParts !== 'function') {
+      throw new Error('formatToParts unavailable');
+    }
     const parts = fmt.formatToParts(shiftedDate);
     const map = {};
     for (const p of parts) {
@@ -217,6 +229,34 @@ export function formatClock12Ar(hour24, minute) {
   const period = hour24 >= 12 ? 'م' : 'ص';
   const h12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
   return `${toArabicDigits(h12)}:${toArabicDigits(pad2(minute))} ${period}`;
+}
+
+export function safeFormatLocalTimeAr(dateInput, timeZone = 'Africa/Cairo') {
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (Number.isNaN(d.getTime())) return '—';
+  try {
+    if (typeof d.toLocaleTimeString === 'function') {
+      return d.toLocaleTimeString('ar-EG');
+    }
+  } catch {
+    // يسقط للتنسيق الآمن أدناه
+  }
+  const p = getZonedParts(d, timeZone);
+  return formatClock12Ar(p.hour, p.minute);
+}
+
+export function safeFormatLocalDateTimeAr(dateInput, timeZone = 'Africa/Cairo') {
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (Number.isNaN(d.getTime())) return '—';
+  try {
+    if (typeof d.toLocaleString === 'function') {
+      return d.toLocaleString('ar-EG');
+    }
+  } catch {
+    // يسقط للتنسيق الآمن أدناه
+  }
+  const p = getZonedParts(d, timeZone);
+  return `${formatGregorianDateAr(p)} · ${formatClock12Ar(p.hour, p.minute)}`;
 }
 
 export function formatTime24FromMinutes(totalMinutes) {

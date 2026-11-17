@@ -26,6 +26,18 @@ function bindManagedEvent(node, eventName, fn) {
   }
 }
 
+function flattenChildren(items, out = []) {
+  for (let i = 0; i < items.length; i += 1) {
+    const item = items[i];
+    if (Array.isArray(item)) {
+      flattenChildren(item, out);
+    } else {
+      out.push(item);
+    }
+  }
+  return out;
+}
+
 export function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
   if (attrs && typeof attrs === 'object') {
@@ -53,7 +65,8 @@ export function el(tag, attrs = {}, ...children) {
     }
   }
 
-  for (const child of children.flat(Infinity)) {
+  const flatChildren = flattenChildren(children);
+  for (const child of flatChildren) {
     if (child === undefined || child === null || child === false) continue;
     if (typeof child === 'string' || typeof child === 'number') {
       node.appendChild(document.createTextNode(String(child)));

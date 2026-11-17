@@ -279,10 +279,9 @@ export function createAudioOrchestrator({
       audio.onerror = () => {
         trySourceAtIndex(idx + 1);
       };
-      audio.src = url;
-      audio.volume = 0;
 
       const seekSec = Math.max(0, Number(options.startTimeSec || 0));
+      state.currentTimeSec = seekSec;
       if (seekSec > 0) {
         const applySeek = () => {
           try {
@@ -290,9 +289,19 @@ export function createAudioOrchestrator({
           } catch {
             // تجاهل آمن قبل تحميل البيانات الوصفية
           }
-          audio.removeEventListener('loadedmetadata', applySeek);
+          audio.removeEventListener?.('loadedmetadata', applySeek);
         };
-        audio.addEventListener('loadedmetadata', applySeek);
+        audio.addEventListener?.('loadedmetadata', applySeek, { once: true });
+      }
+
+      audio.src = url;
+      audio.volume = 0;
+      if (seekSec > 0 && Number(audio.readyState) >= 1) {
+        try {
+          audio.currentTime = seekSec;
+        } catch {
+          // تجاهل آمن
+        }
       }
 
       try {
@@ -402,11 +411,12 @@ export function createAudioOrchestrator({
   }
 
   // محرك تنبيهات الأذان والمذاكرة وقيام الليل مع أولوية الصوت
+  let transitioningAlert = false;
   const alertEngine = createAudioEngine({
     onStateChange: (next) => {
       onAlertStateChange?.(next);
       // عند توقف أو انتهاء صوت الأذان/التنبيه، نستأنف القرآن تلقائياً إن كان متوقفاً بسببه
-      if (!next.isPlaying && state.isInterrupted && interruptedSnapshot) {
+      if (!transitioningAlert && !next.isPlaying && state.isInterrupted && interruptedSnapshot) {
         resumeIfInterrupted();
       }
     },
@@ -431,7 +441,13 @@ export function createAudioOrchestrator({
       await pauseQuran(380);
     }
 
-    const res = await alertEngine.playCue(cueName, alertOptions);
+    transitioningAlert = true;
+    let res;
+    try {
+      res = await alertEngine.playCue(cueName, alertOptions);
+    } finally {
+      transitioningAlert = false;
+    }
     if (!res.ok && state.isInterrupted) {
       // في حال حُجب صوت التنبيه، نترك فرصة 6 ثوانٍ للعرض المرئي أو استئناف المستخدم بـ «تم الاطلاع»
       resumeAfterAlertTimer = setTimeout(() => {

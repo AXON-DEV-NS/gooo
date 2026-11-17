@@ -3,6 +3,7 @@ import {
   formatGregorianDateAr,
   getHijriDate,
   getZonedParts,
+  safeFormatLocalTimeAr,
   toArabicDigits,
 } from '../services/clock.js';
 import { el } from './dom.js';
@@ -27,7 +28,7 @@ export function renderHeader(snapshot, store) {
         'span',
         {
           className: `badge ${weatherSnap.isStale ? 'badge--warning' : 'badge--primary'}`,
-          title: weatherSnap.data.fetchedAt ? `آخر تحديث: ${new Date(weatherSnap.data.fetchedAt).toLocaleTimeString('ar-EG')}` : '',
+          title: weatherSnap.data.fetchedAt ? `آخر تحديث: ${safeFormatLocalTimeAr(weatherSnap.data.fetchedAt, tz)}` : '',
         },
         `الطقس: ${tempTxt} · ${weatherSnap.data.descriptionAr}${weatherSnap.isStale ? ' (محفوظ)' : ''}`
       );

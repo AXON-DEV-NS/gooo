@@ -172,8 +172,21 @@ export function mountApp(rootElement) {
   let lastRenderedRoute = null;
   let preModalFocusLock = null;
 
-  function syncOverlayLayer(container, selector, nextNode, insertBeforeSelector = null) {
-    const existing = container.querySelector(`:scope > ${selector}`);
+  function findDirectChildByClass(container, ...classNames) {
+    if (!container || !container.children) return null;
+    for (let i = 0; i < container.children.length; i += 1) {
+      const child = container.children[i];
+      for (let j = 0; j < classNames.length; j += 1) {
+        if (child.classList && child.classList.contains(classNames[j])) {
+          return child;
+        }
+      }
+    }
+    return null;
+  }
+
+  function syncOverlayLayer(container, className, nextNode, insertBeforeClasses = []) {
+    const existing = findDirectChildByClass(container, className);
     if (!nextNode) {
       if (existing) existing.remove();
       return;
@@ -182,7 +195,7 @@ export function mountApp(rootElement) {
       patchElementInPlace(existing, nextNode);
       return;
     }
-    const anchor = insertBeforeSelector ? container.querySelector(`:scope > ${insertBeforeSelector}`) : null;
+    const anchor = insertBeforeClasses.length > 0 ? findDirectChildByClass(container, ...insertBeforeClasses) : null;
     container.insertBefore(nextNode, anchor || null);
   }
 
@@ -219,7 +232,7 @@ export function mountApp(rootElement) {
 
     if (modalNode) assignFallbackFocusIds(modalNode, 'modal');
 
-    const existingShell = rootElement.querySelector(':scope > .tv-shell');
+    const existingShell = findDirectChildByClass(rootElement, 'tv-shell');
     if (!existingShell) {
       clearNode(rootElement);
       rootElement.appendChild(nextShell);
@@ -228,12 +241,12 @@ export function mountApp(rootElement) {
       if (overscanGuide) rootElement.appendChild(overscanGuide);
     } else {
       if (routeChanged) {
-        const curHeader = existingShell.querySelector(':scope > .app-header');
-        const curMain = existingShell.querySelector(':scope > #main-content');
-        const curNav = existingShell.querySelector(':scope > .bottom-nav');
+        const curHeader = findDirectChildByClass(existingShell, 'app-header');
+        const curMain = findDirectChildByClass(existingShell, 'app-main');
+        const curNav = findDirectChildByClass(existingShell, 'bottom-nav');
         if (curHeader) patchElementInPlace(curHeader, nextHeader);
         if (curMain) {
-          const nextMain = nextShell.querySelector(':scope > #main-content');
+          const nextMain = findDirectChildByClass(nextShell, 'app-main');
           while (curMain.firstChild) curMain.removeChild(curMain.firstChild);
           if (nextMain?.firstChild) {
             curMain.appendChild(nextMain.firstChild);
@@ -245,9 +258,9 @@ export function mountApp(rootElement) {
         patchElementInPlace(existingShell, nextShell);
       }
 
-      syncOverlayLayer(rootElement, '.toast-container', toastNode, '.modal-backdrop, .overscan-frame');
-      syncOverlayLayer(rootElement, '.modal-backdrop', modalNode, '.overscan-frame');
-      syncOverlayLayer(rootElement, '.overscan-frame', overscanGuide, null);
+      syncOverlayLayer(rootElement, 'toast-container', toastNode, ['modal-backdrop', 'overscan-frame']);
+      syncOverlayLayer(rootElement, 'modal-backdrop', modalNode, ['overscan-frame']);
+      syncOverlayLayer(rootElement, 'overscan-frame', overscanGuide, []);
     }
 
     const mainEl = document.getElementById('main-content');
@@ -287,12 +300,35 @@ export function mountApp(rootElement) {
   });
   store.start();
   renderFull(store.getSnapshot());
+  if (typeof window !== 'undefined') {
+    window.__jawooBooted = true;
+  }
 
-  // تسجيل عامل الخدمة للتشغيل دون إنترنت في نسخة الإنتاج فقط
-  if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {
-      // بعض متصفحات التلفاز لا تدعم Service Worker؛ التطبيق يستمر بالعمل بصورة طبيعية
-    });
+  // تسجيل عامل الخدمة يتم فقط بعد ٣ ثوانٍ من ظهور الواجهة وعلى HTTPS (لا يعمل تلقائياً على http أو localhost)
+  let swRegTimer = null;
+  const loc = typeof window !== 'undefined' ? window.location : null;
+  const isHttpsProd = Boolean(
+    import.meta.env.PROD &&
+    loc &&
+    loc.protocol === 'https:' &&
+    loc.hostname !== 'localhost' &&
+    loc.hostname !== '127.0.0.1'
+  );
+
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    if (isHttpsProd) {
+      swRegTimer = setTimeout(() => {
+        if (window.__jawooBooted) {
+          navigator.serviceWorker.register('./sw.js').catch(() => {
+            // بعض متصفحات التلفاز لا تدعم Service Worker؛ التطبيق يستمر بالعمل بصورة طبيعية
+          });
+        }
+      }, 3000);
+    } else if (typeof navigator.serviceWorker.getRegistrations === 'function') {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        for (const r of regs) r.unregister();
+      }).catch(() => {});
+    }
   }
 
   return {
@@ -301,6 +337,7 @@ export function mountApp(rootElement) {
     idleDetector,
     screensaverOverlay,
     destroy() {
+      if (swRegTimer) clearTimeout(swRegTimer);
       idleDetector.destroy();
       screensaverOverlay.unmount();
       remote.destroy();

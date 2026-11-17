@@ -7,7 +7,7 @@ import {
   OBLIGATORY_PRAYER_IDS,
   PRAYER_LABELS,
 } from '../data/defaults.js';
-import { formatDurationHMS, toArabicDigits } from '../services/clock.js';
+import { formatDurationHMS, safeFormatLocalDateTimeAr, toArabicDigits } from '../services/clock.js';
 
 export function renderPrayerPage(snapshot, store) {
   const { appState, runtime } = snapshot;
@@ -73,7 +73,7 @@ export function renderPrayerPage(snapshot, store) {
         el(
           'p',
           { className: 'card-subtitle' },
-          `المصدر: ${prayerState?.todayData?.source || 'غير محدد'}${prayerState?.todayData?.fetchedAt ? ` — آخر تحديث: ${new Date(prayerState.todayData.fetchedAt).toLocaleString('ar-EG')}` : ''}`
+          `المصدر: ${prayerState?.todayData?.source || 'غير محدد'}${prayerState?.todayData?.fetchedAt ? ` — آخر تحديث: ${safeFormatLocalDateTimeAr(prayerState.todayData.fetchedAt, settings.location.timezone)}` : ''}`
         )
       ),
       el(

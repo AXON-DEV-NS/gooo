@@ -15,13 +15,166 @@
   </head>
   <body>
     <div id="app">
-      <div style="padding:48px;font-family:sans-serif;text-align:center;">جاري تشغيل لوحة جووو...</div>
+      <div id="jawoo-boot-fallback" style="padding:48px;font-family:sans-serif;text-align:center;">جاري تشغيل لوحة جووو...</div>
     </div>
     <noscript>
       <div style="padding:32px;font-family:sans-serif;direction:rtl;text-align:center;">
         يتطلب تطبيق «جووو» تفعيل JavaScript في متصفح التلفاز للعمل.
       </div>
     </noscript>
+    <script>
+      (function () {
+        if (typeof window.globalThis === 'undefined') {
+          window.globalThis = window;
+        }
+        window.__jawooBooted = false;
+        window.__jawooErrors = [];
+
+        function pushBootError(msg) {
+          if (!msg) return;
+          var text = String(msg);
+          if (text.indexOf('import.meta.resolve') !== -1) return;
+          if (window.__jawooErrors.length < 6) {
+            window.__jawooErrors.push(text);
+          }
+        }
+
+        var prevOnError = window.onerror;
+        window.onerror = function (message, source, lineno) {
+          var detail = String(message || 'Script error') + (source ? ' (' + source + ':' + lineno + ')' : '');
+          pushBootError(detail);
+          if (typeof prevOnError === 'function') {
+            return prevOnError.apply(this, arguments);
+          }
+          return false;
+        };
+
+        if (typeof window.addEventListener === 'function') {
+          window.addEventListener('unhandledrejection', function (event) {
+            var reasonText = 'Promise rejection';
+            if (event && event.reason) {
+              reasonText = event.reason.message ? event.reason.message : String(event.reason);
+            }
+            pushBootError(reasonText);
+          });
+        }
+
+        // تنظيف عامل الخدمة على localhost / http غير المشفر لمنع تعليق الصفحة بكاش قديم
+        try {
+          var proto = window.location ? window.location.protocol : '';
+          var host = window.location ? window.location.hostname : '';
+          var isLocal = host === 'localhost' || host === '127.0.0.1' || host === '';
+          if ((proto !== 'https:' || isLocal) && navigator && navigator.serviceWorker && typeof navigator.serviceWorker.getRegistrations === 'function') {
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              for (var i = 0; i < regs.length; i++) {
+                regs[i].unregister();
+              }
+            });
+          }
+        } catch (e) {}
+
+        function clearCacheAndReload() {
+          var btn = document.getElementById('jawoo-clear-cache-btn');
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'جاري مسح الكاش وإعادة التشغيل...';
+          }
+
+          function performReload() {
+            try {
+              var loc = window.location;
+              var sep = loc.search ? '&' : '?';
+              loc.href = loc.pathname + loc.search + sep + 'cb=' + (new Date().getTime());
+            } catch (e) {
+              window.location.reload();
+            }
+          }
+
+          var tasks = 0;
+          function finishTask() {
+            tasks -= 1;
+            if (tasks <= 0) {
+              performReload();
+            }
+          }
+
+          try {
+            if (navigator && navigator.serviceWorker && typeof navigator.serviceWorker.getRegistrations === 'function') {
+              tasks += 1;
+              navigator.serviceWorker.getRegistrations().then(function (regs) {
+                var arr = [];
+                for (var i = 0; i < regs.length; i++) {
+                  arr.push(regs[i].unregister());
+                }
+                return Promise.all(arr);
+              }).then(finishTask, finishTask);
+            }
+            if (window.caches && typeof window.caches.keys === 'function') {
+              tasks += 1;
+              window.caches.keys().then(function (keys) {
+                var arr = [];
+                for (var i = 0; i < keys.length; i++) {
+                  arr.push(window.caches.delete(keys[i]));
+                }
+                return Promise.all(arr);
+              }).then(finishTask, finishTask);
+            }
+          } catch (e) {}
+
+          if (tasks === 0) {
+            performReload();
+          } else {
+            setTimeout(performReload, 1500);
+          }
+        }
+
+        function showBootDiagnostic() {
+          if (window.__jawooBooted) return;
+          if (document.querySelector && document.querySelector('.tv-shell')) return;
+          var root = document.getElementById('app');
+          if (!root) return;
+          while (root.firstChild) {
+            root.removeChild(root.firstChild);
+          }
+
+          var box = document.createElement('div');
+          box.setAttribute('id', 'jawoo-boot-recovery');
+          box.setAttribute('style', 'max-width:680px;margin:48px auto;padding:28px;border:2px solid #0F6247;border-radius:16px;background:#FFFDF8;color:#181C19;font-family:sans-serif;direction:rtl;text-align:right;line-height:1.7;');
+
+          var heading = document.createElement('h2');
+          heading.setAttribute('style', 'margin:0 0 12px 0;color:#0F6247;font-size:24px;');
+          heading.appendChild(document.createTextNode('تعذر إكمال تشغيل لوحة «جووو» تلقائياً'));
+          box.appendChild(heading);
+
+          var summary = document.createElement('p');
+          summary.setAttribute('style', 'margin:0 0 14px 0;font-size:17px;');
+          summary.appendChild(document.createTextNode('استغرق الإقلاع أكثر من ٦ ثوانٍ. غالباً السبب ملفات كاش قديمة من تشغيل سابق أو عدم دعم متصفح التلفاز لبعض خصائص التشغيل.'));
+          box.appendChild(summary);
+
+          if (window.__jawooErrors && window.__jawooErrors.length > 0) {
+            var errBox = document.createElement('div');
+            errBox.setAttribute('style', 'margin:0 0 16px 0;padding:12px;border-radius:10px;background:#FBE8E8;color:#A82424;font-size:14px;direction:ltr;text-align:left;word-break:break-word;');
+            errBox.appendChild(document.createTextNode('الخطأ المرصود: ' + window.__jawooErrors[0]));
+            box.appendChild(errBox);
+          }
+
+          var actionBtn = document.createElement('button');
+          actionBtn.setAttribute('id', 'jawoo-clear-cache-btn');
+          actionBtn.setAttribute('type', 'button');
+          actionBtn.setAttribute('style', 'padding:12px 24px;font-size:18px;font-weight:bold;background:#0F6247;color:#FFFFFF;border:none;border-radius:10px;cursor:pointer;');
+          actionBtn.appendChild(document.createTextNode('مسح الكاش وإعادة التشغيل'));
+          actionBtn.onclick = clearCacheAndReload;
+          box.appendChild(actionBtn);
+
+          root.appendChild(box);
+          try {
+            actionBtn.focus({ preventScroll: true });
+          } catch (e) {}
+        }
+
+        window.setTimeout(showBootDiagnostic, 6000);
+      })();
+    </script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

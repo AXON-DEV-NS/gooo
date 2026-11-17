@@ -30,7 +30,7 @@ export function renderQuranPage(snapshot, store) {
       ? 'ملف محلي'
       : qState.sourceType === 'indexeddb'
         ? 'محفوظ بدون إنترنت ✓'
-        : 'بث مباشر (MP3Quran / Archive)';
+        : 'بث مباشر (خادم التلاوات / الأرشيف)';
 
   // ١. المشغل الصوتي الكبير المريح للريموت
   const playerCard = el(

@@ -33,7 +33,11 @@ export function getSurahSourceUrls(surahNumber) {
 }
 
 export function isIndexedDbAvailable() {
-  return typeof globalThis.indexedDB !== 'undefined';
+  try {
+    return typeof globalThis !== 'undefined' && typeof globalThis.indexedDB !== 'undefined' && globalThis.indexedDB !== null;
+  } catch {
+    return false;
+  }
 }
 
 function openQuranDb() {

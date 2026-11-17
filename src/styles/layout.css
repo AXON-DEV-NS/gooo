@@ -94,24 +94,32 @@ p {
   flex: 1 0 auto;
 }
 
-/* ضبط الكثافة الرأسية لشاشات التلفاز 720p لمنع التمرير أو تداخل البطاقات */
+/* ضبط الكثافة الرأسية لشاشات التلفاز 720p مع الإبقاء التام على هامش الأمان ٤٪ */
+@media (min-width: 1025px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+}
+
 @media (max-height: 820px) and (min-width: 1025px) {
   .tv-shell {
-    padding: clamp(10px, 2.2vh, 22px) var(--safe-x);
-    gap: 8px;
+    padding: var(--safe-y) var(--safe-x);
+    gap: 6px;
   }
 
   .app-header {
-    padding: 6px 14px;
+    padding: 5px 12px;
   }
 
   .bottom-nav {
-    padding: 6px 10px;
+    padding: 4px 10px;
   }
 
   .bottom-nav .nav-item {
-    min-height: 38px;
-    padding: 5px 12px;
+    min-height: 34px;
+    padding: 4px 10px;
   }
 
   .home-grid,
@@ -120,8 +128,8 @@ p {
   }
 
   .home-grid .card {
-    padding: 7px 12px;
-    gap: 4px;
+    padding: 6px 10px;
+    gap: 3px;
   }
 
   .home-grid .card-title {
