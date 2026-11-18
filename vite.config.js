@@ -97,12 +97,29 @@ function animatedBackgroundsPlugin() {
   };
 }
 
+function safeLegacyBigIntPlugin() {
+  const unguardedCallPattern = /(^|[^\w.$'"])BigInt\s*\(/g;
+  return {
+    name: 'jawoo-safe-legacy-bigint',
+    transform(code, id) {
+      if (!id || id.indexOf('node_modules') === -1 || id.indexOf('zod') === -1) return null;
+      if (code.indexOf('BigInt') === -1) return null;
+      const replaced = code.replace(unguardedCallPattern, '$1__jawooSafeBigInt(');
+      if (replaced === code) return null;
+      const helper =
+        '\nfunction __jawooSafeBigInt(val) { try { var g = typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : null); var bi = g && g["BigInt"]; if (typeof bi === "function") return bi(val); } catch (e) {} return Number(val) || 0; }\n';
+      return { code: replaced + helper, map: null };
+    },
+  };
+}
+
 export default defineConfig({
   base: './',
   plugins: [
     animatedBackgroundsPlugin(),
+    safeLegacyBigIntPlugin(),
     legacy({
-      targets: ['chrome >= 49', 'safari >= 10', 'edge >= 15', 'android >= 5'],
+      targets: ['chrome >= 40', 'safari >= 9', 'android >= 4.4'],
       renderLegacyChunks: true,
       modernPolyfills: true,
     }),

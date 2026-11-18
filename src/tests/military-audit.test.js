@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import fs from 'node:fs';
 import path from 'node:path';
+import { JSDOM } from 'jsdom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SCREENSAVER_PRESETS } from '../data/screensaver-presets.js';
 import { createDefaultSettings, createInitialState } from '../data/defaults.js';
@@ -91,22 +92,131 @@ describe('Military-Grade E2E Audit Protocols 1-6', () => {
       }
       overlay.unmount();
 
-      // التحقق من نقاء سكريبت ES5 داخل index.html وعدم وجود صيغ ES6+
+      // التحقق من نقاء كافة وسوم ES5 <script> داخل index.html وعدم وجود صيغ ES6+
       const indexHtml = fs.readFileSync(path.resolve('index.html'), 'utf8');
-      const inlineWatchdog = indexHtml.match(/<script>([\s\S]*?)<\/script>/)[1];
-      const withoutStrings = inlineWatchdog.replace(/'[^']*'/g, "''");
-      expect(withoutStrings).not.toMatch(/\b(const|let|class|async|await|import|export)\b/);
-      expect(inlineWatchdog).not.toContain('=>');
-      expect(inlineWatchdog).not.toContain('?.');
-      expect(inlineWatchdog).not.toContain('??');
-      expect(inlineWatchdog).not.toContain('`');
-      expect(inlineWatchdog).toContain('6000');
-      expect(inlineWatchdog).toContain('مسح الكاش وإعادة التشغيل');
+      const inlineScripts = [...indexHtml.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+      expect(inlineScripts.length).toBeGreaterThanOrEqual(2);
+      for (const scriptCode of inlineScripts) {
+        const withoutStrings = scriptCode.replace(/'[^']*'/g, "''");
+        expect(withoutStrings).not.toMatch(/\b(const|let|class|async|await|import|export)\b/);
+        expect(scriptCode).not.toContain('=>');
+        expect(scriptCode).not.toContain('?.');
+        expect(scriptCode).not.toContain('??');
+        expect(scriptCode).not.toContain('`');
+      }
+      const watchdogScript = inlineScripts[inlineScripts.length - 1];
+      expect(watchdogScript).toContain('6000');
+      expect(watchdogScript).toContain('مسح الكاش وإعادة التشغيل');
     } finally {
       intlSpy.mockRestore();
       if (origStorageDesc) {
         Object.defineProperty(window.navigator, 'storage', origStorageDesc);
       }
+    }
+  });
+
+  it('[Protocol 1b] keeps dist/assets free of unguarded BigInt calls and boots compiled legacy bundle without native BigInt/AbortController/queueMicrotask/closest', async () => {
+    const srcFiles = walkJsFiles(path.resolve('src'));
+    for (const f of srcFiles) {
+      const code = fs.readFileSync(f, 'utf8');
+      expect(code, `Unexpected BigInt in ${f}`).not.toMatch(/(^|[^\w.$'"])BigInt\s*\(/);
+      expect(code, `Unexpected bigint literal in ${f}`).not.toMatch(/\b\d+n\b/);
+    }
+
+    const assetsDir = path.resolve('dist', 'assets');
+    expect(fs.existsSync(assetsDir)).toBe(true);
+    const assetJsFiles = fs.readdirSync(assetsDir).filter((f) => f.endsWith('.js'));
+    const polyFile = assetJsFiles.find((f) => f.startsWith('polyfills-legacy-'));
+    const legacyFile = assetJsFiles.find((f) => f.startsWith('index-legacy-'));
+    expect(polyFile).toBeTruthy();
+    expect(legacyFile).toBeTruthy();
+
+    for (const f of assetJsFiles) {
+      const code = fs.readFileSync(path.join(assetsDir, f), 'utf8');
+      // منع أي استدعاء عارٍ غير محمي لـ BigInt(...) في حزم البناء النهائية
+      expect(code, `Unguarded BigInt call in ${f}`).not.toMatch(/(^|[^\w.$'"])BigInt\s*\(/);
+    }
+
+    const distHtml = fs.readFileSync(path.resolve('dist', 'index.html'), 'utf8');
+    const inlineScripts = [...distHtml.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+    expect(inlineScripts.length).toBeGreaterThanOrEqual(2);
+    const headShimScript = inlineScripts[0];
+    const watchdogScript = inlineScripts[inlineScripts.length - 1];
+
+    const polyCode = fs.readFileSync(path.join(assetsDir, polyFile), 'utf8');
+    const legacyCode = fs.readFileSync(path.join(assetsDir, legacyFile), 'utf8');
+
+    const dom = new JSDOM(
+      '<!doctype html><html lang="ar" dir="rtl"><head></head><body><div id="app"><div id="jawoo-boot-fallback">جاري تشغيل لوحة جووو...</div></div></body></html>',
+      { url: 'http://localhost:4173/', runScripts: 'outside-only' }
+    );
+    const win = dom.window;
+
+    try {
+      // محاكاة متصفح توشيبا القديم بإزالة الواجهات الحديثة قبل تنفيذ أي سكريبت
+      Object.defineProperty(win, 'BigInt', { value: undefined, writable: true, configurable: true });
+      Object.defineProperty(win, 'queueMicrotask', { value: undefined, writable: true, configurable: true });
+      Object.defineProperty(win, 'AbortController', { value: undefined, writable: true, configurable: true });
+      Object.defineProperty(win, 'globalThis', { value: undefined, writable: true, configurable: true });
+      delete win.Element.prototype.closest;
+      delete win.Element.prototype.matches;
+
+      const runtimeErrors = [];
+      win.addEventListener('error', (e) => runtimeErrors.push(e.message || String(e.error || 'error')));
+      win.addEventListener('unhandledrejection', (e) =>
+        runtimeErrors.push(e.reason?.message ? e.reason.message : String(e.reason || 'rejection'))
+      );
+
+      // ١. تشغيل سكريبت البدائل الآمنة في أعلى <head>
+      win.eval(headShimScript);
+      expect(typeof win.BigInt).toBe('function');
+      expect(win.BigInt('-9223372036854775808')).toBe(-9223372036854775808);
+      expect(win.BigInt(0)).toBe(0);
+      expect(win.globalThis).toBe(win);
+      expect(typeof win.queueMicrotask).toBe('function');
+      expect(typeof win.AbortController).toBe('function');
+      const ac = new win.AbortController();
+      expect(ac.signal.aborted).toBe(false);
+      ac.abort();
+      expect(ac.signal.aborted).toBe(true);
+      expect(typeof win.Element.prototype.closest).toBe('function');
+
+      let microtaskRan = false;
+      win.queueMicrotask(() => {
+        microtaskRan = true;
+      });
+
+      // ٢. تشغيل مراقب الطوارئ ثم الحزم القديمة المجمّعة (polyfills-legacy + index-legacy)
+      win.eval(watchdogScript);
+      win.eval(polyCode);
+
+      let capturedDeclare = null;
+      const origRegister = win.System.register.bind(win.System);
+      win.System.register = function (deps, declare) {
+        capturedDeclare = typeof deps === 'function' ? deps : declare;
+        return origRegister(deps, declare);
+      };
+      win.eval(legacyCode);
+      expect(typeof capturedDeclare).toBe('function');
+
+      const mod = capturedDeclare(function () {}, {
+        meta: { url: `http://localhost:4173/assets/${legacyFile}` },
+      });
+      await mod.execute();
+      await new Promise((r) => setTimeout(r, 120));
+
+      expect(microtaskRan).toBe(true);
+      expect(runtimeErrors).toEqual([]);
+      expect(win.__jawooErrors).toEqual([]);
+      expect(win.__jawooBooted).toBe(true);
+      expect(win.document.querySelector('.tv-shell')).not.toBeNull();
+      expect(win.document.getElementById('jawoo-boot-fallback')).toBeNull();
+      const bodyText = win.document.body.textContent || '';
+      expect(bodyText).toContain('فاقوس');
+      expect(bodyText).toContain('الصلاة القادمة');
+      expect(bodyText).toContain('مذاكرة');
+    } finally {
+      win.close();
     }
   });
 

@@ -2,6 +2,70 @@
 <html lang="ar" dir="rtl" data-theme="light">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function () {
+        if (typeof window.BigInt === 'undefined') {
+          window.BigInt = function (val) {
+            return Number(val) || 0;
+          };
+        }
+        if (typeof window.globalThis === 'undefined') {
+          window.globalThis = window;
+        }
+        if (typeof window.queueMicrotask !== 'function') {
+          window.queueMicrotask = function (cb) {
+            if (typeof Promise === 'function') {
+              Promise.resolve().then(cb);
+            } else {
+              window.setTimeout(cb, 0);
+            }
+          };
+        }
+        if (typeof window.AbortController === 'undefined') {
+          window.AbortController = function AbortController() {
+            this.signal = {
+              aborted: false,
+              reason: undefined,
+              onabort: null,
+              addEventListener: function () {},
+              removeEventListener: function () {},
+              dispatchEvent: function () {
+                return true;
+              },
+            };
+          };
+          window.AbortController.prototype.abort = function (reason) {
+            this.signal.aborted = true;
+            this.signal.reason = reason;
+            if (typeof this.signal.onabort === 'function') {
+              try {
+                this.signal.onabort();
+              } catch (e) {}
+            }
+          };
+        }
+        if (typeof Element !== 'undefined') {
+          if (!Element.prototype.matches) {
+            Element.prototype.matches =
+              Element.prototype.msMatchesSelector ||
+              Element.prototype.webkitMatchesSelector ||
+              function () {
+                return false;
+              };
+          }
+          if (!Element.prototype.closest) {
+            Element.prototype.closest = function (selector) {
+              var el = this;
+              do {
+                if (el && el.nodeType === 1 && el.matches(selector)) return el;
+                el = el.parentElement || el.parentNode;
+              } while (el !== null && el.nodeType === 1);
+              return null;
+            };
+          }
+        }
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#1B4D3E" />
     <meta
@@ -24,9 +88,6 @@
     </noscript>
     <script>
       (function () {
-        if (typeof window.globalThis === 'undefined') {
-          window.globalThis = window;
-        }
         window.__jawooBooted = false;
         window.__jawooErrors = [];
 

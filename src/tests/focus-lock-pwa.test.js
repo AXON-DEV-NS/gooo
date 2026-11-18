@@ -361,14 +361,23 @@ describe('Zero-Reload Focus/Scroll Lock & PWA Installation', () => {
     vi.stubGlobal('indexedDB', undefined);
     expect(isIndexedDbAvailable()).toBe(false);
 
-    // ٣. التحقق من أن سكريبت مراقب الإقلاع في index.html مكتوب بـ ES5 نقي دون صيغ حديثة ويحتوي مهلة 6 ثوانٍ
+    // ٣. التحقق من أن سكريبتات ES5 المضمّنة في index.html (البدائل الآمنة + مراقب الإقلاع) نقية دون صيغ حديثة
     const html = fs.readFileSync(path.resolve('index.html'), 'utf8');
-    const inlineMatch = html.match(/<script>([\s\S]*?)<\/script>/);
-    expect(inlineMatch).not.toBeNull();
-    const watchdogCode = inlineMatch[1];
-    expect(watchdogCode).not.toMatch(/\b(const|let|class|async|await)\b/);
-    expect(watchdogCode).not.toContain('=>');
-    expect(watchdogCode).not.toContain('`');
+    const inlineScripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+    expect(inlineScripts.length).toBeGreaterThanOrEqual(2);
+    for (const scriptCode of inlineScripts) {
+      const withoutStrings = scriptCode.replace(/'[^']*'/g, "''");
+      expect(withoutStrings).not.toMatch(/\b(const|let|class|async|await)\b/);
+      expect(scriptCode).not.toContain('=>');
+      expect(scriptCode).not.toContain('`');
+    }
+    const polyfillHeadCode = inlineScripts[0];
+    expect(polyfillHeadCode).toContain('window.BigInt');
+    expect(polyfillHeadCode).toContain('window.globalThis');
+    expect(polyfillHeadCode).toContain('window.queueMicrotask');
+    expect(polyfillHeadCode).toContain('window.AbortController');
+
+    const watchdogCode = inlineScripts[inlineScripts.length - 1];
     expect(watchdogCode).toContain('window.onerror');
     expect(watchdogCode).toContain('6000');
     expect(watchdogCode).toContain('مسح الكاش وإعادة التشغيل');
